@@ -34,6 +34,7 @@ config.enableVehicleSwap = true
 config.enableAbsorbBar = true
 config.RangeStatus = { name = "OutOfRange", assignto = set("frameAlpha"), color = {0,0,0,0.65}, priority = 90 }
 config.TargetStatus = { name = "Target", assignto = set("border"), color = {0.7,0.2,0.5}, priority = 65 }
+config.FocusStatus = { name = "Focus", assignto = set("border"), color = {0.9,0.1,0.8}, priority = 60 }
 config.MouseoverStatus = { name = "Mouseover", assignto = set("border", "mouseoverHighlight"), color = {1,0.5,0.8}, priority = 66 }
 config.AggroStatus = { name = "Aggro", assignto = set("raidbuff"),  color = { 0.7, 0, 0},priority = 85 }
 config.RCReady = { name = "RCReady", priority = 90, assignto = set("statusIcon"), color = { 0, 1, 0}, text = "READY" }
@@ -469,10 +470,17 @@ if playerClass == "SHAMAN" then
         RangeCheckBySpell(8004),
     }
 
+    local DynamicDispelTypes = function(...)
+        if IsPlayerSpell(383013) then -- Poison Cleansing Totem
+            return DispelTypes("Poison", ...)
+        end
+        return DispelTypes(...)
+    end
+
     config.DispelBitmasks = {
-        DispelTypes("Curse"),
-        DispelTypes("Curse"),
-        DispelTypes("Magic", "Curse"),
+        DynamicDispelTypes("Curse", "Poison"),
+        DynamicDispelTypes("Curse", "Poison"),
+        DynamicDispelTypes("Magic", "Curse", "Poison"),
     }
 end
 if playerClass == "HUNTER" then
@@ -657,6 +665,16 @@ config.MapIDs = {
 
     [2000] = "Sepulcher of the First Ones",
 
+    [2101] = "Halls of Infusion",
+    [2102] = "Algeth'ar Academy",
+    [2103] = "Brackenhide Hollow",
+    [2104] = "Neltharus",
+    [2105] = "Ruby Life Pools",
+    [2106] = "The Nokhud Offensive",
+    [2107] = "Uldaman",
+    [2108] = "The Azure Vault",
+    [2109] = "Vault of the Incarnates",
+
     [704] = "Halls of Valor",
     [706] = "Maw of Souls",
     [731] = "Neltharion's Lair",
@@ -675,6 +693,22 @@ config.defaultDebuffHighlights = {
         [212183] = { 212183, 3, "Smoke Bomb" },
         [33786] = { 33786, 3, "Cyclone" },
     },
+
+    -- ["Vault of the Incarnates"] = {
+    -- },
+    ["The Azure Vault"] = {
+        [386549] = { 386549, 3, "Arcane Elemental, Waking Bane" },
+        [384978] = { 384978, 4, "Umbrelskul, Dragon Strike" },
+
+    },
+    ["Shadowmoon Burial Grounds"] = {
+        [152819] = { 152819, 1, "Shadowmoon Bone-Mender, Shadow Word: Frailty" },
+
+    },
+    ["Ruby Life Pools"] = {
+        [372047] = { 372047, 4, "Defiler Draghar, Steel Barrage" },
+    },
+
     ["Return to Karazhan: Lower"] = {
         [228239] = { 228239, 3, "Forlorn Spirit, Terrifying Wail" },
         -- [227981] = { 227981, 1, "uppercut" },
