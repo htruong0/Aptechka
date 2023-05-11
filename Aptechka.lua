@@ -2559,7 +2559,7 @@ local onenter = function(self)
     if AptechkaDB.global.enableMouseoverStatus then
         FrameSetJob(self, config.MouseoverStatus, true)
     end
-    if AptechkaDB.global.disableTooltip or UnitAffectingCombat("player") then return end
+    if AptechkaDB.global.disableTooltip then return end
     UnitFrame_OnEnter(self)
     self:SetScript("OnUpdate", UnitFrame_OnUpdate)
 end
