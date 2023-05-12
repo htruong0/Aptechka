@@ -1419,37 +1419,45 @@ end
 local Enum_RunicPower = Enum.PowerType.RunicPower
 local Enum_Alternate = Enum.PowerType.Alternate
 function Aptechka.FrameUpdatePower(frame, unit, ptype)
-    if ptype == "MANA" then-- not frame.power.disabled then
-        local powerMax = UnitPowerMax(unit, 0)
-        local power = UnitPower(unit, 0)
-        if powerMax == 0 then
-            power = 1
-            powerMax = 1
-        end
-        local manaPercent = GetForegroundSeparation(power, powerMax, fgShowMissing)
-        frame.power:SetValue(manaPercent*100)
-    elseif ptype == "RUNIC_POWER" then
-        if not Aptechka:UnitIsTank(unit) then
-            return FrameSetJob(frame, config.RunicPowerStatus, false)
-        end
-        local powerMax = UnitPowerMax(unit, Enum_RunicPower)
-        local power = UnitPower(unit, Enum_RunicPower)
-        if power > 40 then
-            local p = power/powerMax
-            FrameSetJob(frame, config.RunicPowerStatus, true, "PROGRESS", power, powerMax, p)
-        else
-            FrameSetJob(frame, config.RunicPowerStatus, false)
-        end
-    elseif ptype == "ALTERNATE" then
-        local powerMax = UnitPowerMax(unit, Enum_Alternate)
-        local power = UnitPower(unit, Enum_Alternate)
-        if power > 0 then
-            local p = power/powerMax
-            FrameSetJob(frame, config.AltPowerStatus, true, "PROGRESS", power, powerMax, p)
-        else
-            FrameSetJob(frame, config.AltPowerStatus, false)
-        end
+    -- if ptype == "MANA" then-- not frame.power.disabled then
+    --     local powerMax = UnitPowerMax(unit, 0)
+    --     local power = UnitPower(unit, 0)
+    --     if powerMax == 0 then
+    --         power = 1
+    --         powerMax = 1
+    --     end
+    --     local manaPercent = GetForegroundSeparation(power, powerMax, fgShowMissing)
+    --     frame.power:SetValue(manaPercent*100)
+    -- elseif ptype == "RUNIC_POWER" then
+    --     if not Aptechka:UnitIsTank(unit) then
+    --         return FrameSetJob(frame, config.RunicPowerStatus, false)
+    --     end
+    --     local powerMax = UnitPowerMax(unit, Enum_RunicPower)
+    --     local power = UnitPower(unit, Enum_RunicPower)
+    --     if power > 40 then
+    --         local p = power/powerMax
+    --         FrameSetJob(frame, config.RunicPowerStatus, true, "PROGRESS", power, powerMax, p)
+    --     else
+    --         FrameSetJob(frame, config.RunicPowerStatus, false)
+    --     end
+    -- elseif ptype == "ALTERNATE" then
+    --     local powerMax = UnitPowerMax(unit, Enum_Alternate)
+    --     local power = UnitPower(unit, Enum_Alternate)
+    --     if power > 0 then
+    --         local p = power/powerMax
+    --         FrameSetJob(frame, config.AltPowerStatus, true, "PROGRESS", power, powerMax, p)
+    --     else
+    --         FrameSetJob(frame, config.AltPowerStatus, false)
+    --     end
+    -- end
+    local powerMax = UnitPowerMax(unit)
+    local power = UnitPower(unit)
+
+    if powerMax == 0 then
+        power = 1
+        powerMax = 1
     end
+    frame.power:SetValue(power/powerMax*100)
 end
 function Aptechka.UNIT_POWER_UPDATE(self, event, unit, ptype)
     Aptechka:ForEachUnitFrame(unit, Aptechka.FrameUpdatePower, ptype)
@@ -1701,6 +1709,7 @@ end
 local roleCoords = {
     TANK = { 0, 19/64, 22/64, 41/64 },
     HEALER = { 20/64, 39/64, 1/64, 20/64 },
+    DAMAGER = { 20/64, 39/64, 22/64, 41/64 },
 }
 function Aptechka.FrameCheckRoles(self, unit )
 
@@ -1746,7 +1755,7 @@ function Aptechka.FrameCheckRoles(self, unit )
             FrameSetJob(self, config.AssistStatus, isAssistant)
         end
 
-        if role == "HEALER" or role == "TANK" then
+        if role == "HEALER" or role == "TANK" or role == "DAMAGER" then
             FrameSetJob(self, config.RoleStatus, true, "ROLE", role)
         else
             FrameSetJob(self, config.RoleStatus, false)

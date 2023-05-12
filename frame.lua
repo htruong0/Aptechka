@@ -454,6 +454,7 @@ end
 local roleCoords = {
     TANK = { 0, 19/64, 22/64, 41/64 },
     HEALER = { 20/64, 39/64, 1/64, 20/64 },
+    DAMAGER = { 20/64, 39/64, 22/64, 41/64 },
 }
 function contentNormalizers.ROLE(job, state, contentType, ...)
     local timerType, cur, max, count, icon, text, r,g,b, a, tr,tg,tb, texture, texCoords
@@ -684,8 +685,18 @@ local SetJob_PowerBar = function(self, job, state, contentType, ...)
     local r,g,b,a
     local r2,g2,b2
     if contentType == "PowerBar" then
+        if self.powerType == "ENERGY" then
+        r, g, b = 0.65, 0.63, 0.35
+    elseif self.powerType == "MANA" then
+        r, g, b = 0.31, 0.45, 0.63
+    elseif self.powerType == "RAGE" then
+        r, g, b = 0.69, 0.31, 0.31
+    elseif self.powerType == "RUNIC_POWER" then
+        r, g, b = 0.00, 0.82, 1.00
+    else
         r,g,b = unpack(profile.powerColor)
-        if profile.useCustomBackgroundColorPower then
+    end        
+    if profile.useCustomBackgroundColorPower then
             r2,g2,b2 = unpack(profile.customBackgroundColorPower)
         else
             r2,g2,b2 = r,g,b
@@ -1732,7 +1743,7 @@ local function DebuffIcon_SetDebuffStyle(self, opts)
         self:SetSize(w,h)
         if not self.SetBackdrop then
             -- if BackdropTemplateMixin then
-                Mixin( self, BackdropTemplateMixin)
+                Mixin(self, BackdropTemplateMixin)
             -- end
         end
         self.border = true
@@ -1740,7 +1751,7 @@ local function DebuffIcon_SetDebuffStyle(self, opts)
         self:SetBackdropBorderColor(1,0,0)
         it:SetSize(pixelperfect(w-2*p), pixelperfect(h-2*p))
         it:SetPoint("TOPLEFT", self, "TOPLEFT", p, -p)
-        cd:SetAllPoints(self)
+        -- cd:SetAllPoints(self)
         dtt:Hide()
     elseif style == "STRIP_BOTTOM" then
         local dttLen = h*0.25
