@@ -693,6 +693,8 @@ local SetJob_PowerBar = function(self, job, state, contentType, ...)
         r, g, b = 0.69, 0.31, 0.31
     elseif self.powerType == "RUNIC_POWER" then
         r, g, b = 0.00, 0.82, 1.00
+    elseif self.powerType == "FOCUS" then
+        r, g, b = 0.71, 0.43, 0.27
     else
         r,g,b = unpack(profile.powerColor)
     end        
