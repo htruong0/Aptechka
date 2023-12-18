@@ -24,6 +24,7 @@ local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitPhaseReason = UnitPhaseReason
 local GetSpecialization = GetSpecialization
 local GetSpecializationRole = GetSpecializationRole
+local GetActiveTalentGroup = GetActiveTalentGroup
 local HasIncomingSummon = C_IncomingSummon and C_IncomingSummon.HasIncomingSummon
 local COMBATLOG_OBJECT_AFFILIATION_MINE = COMBATLOG_OBJECT_AFFILIATION_MINE
 local COMBATLOG_OBJECT_AFFILIATION_UPTORAID = COMBATLOG_OBJECT_AFFILIATION_RAID + COMBATLOG_OBJECT_AFFILIATION_PARTY + COMBATLOG_OBJECT_AFFILIATION_MINE
@@ -33,17 +34,22 @@ local dummyFalse = function() return false end
 local dummy0 = function() return 0 end
 if apiLevel <= 3 then
     GetSpecialization = function() return 1 end
+    -- GetSpecializationRole = function(spec)
+    --     local tg = GetActiveTalentGroup()
+    --     return GetTalentGroupRole(tg)
+    -- end
     GetSpecializationRole = function(spec)
         local tg = GetActiveTalentGroup()
-        return GetTalentGroupRole(tg)
+        if not AptechkaDB_Char.forcedClassicRole then return "DAMAGER" end
+        return AptechkaDB_Char.forcedClassicRole[tg]
     end
     UnitGetTotalAbsorbs = dummy0
     UnitGetTotalHealAbsorbs = dummy0
-    UnitPhaseReason = dummyFalse
+    UnitPhaseReason = function(unit) return not UnitInPhase(unit) end
     HasIncomingSummon = dummyNil
 end
 if apiLevel <= 2 then
-    GetSpecializationRole = function(spec) return AptechkaDB_Char.forcedClassicRole end
+    GetActiveTalentGroup = function() return 1 end
     UnitHasVehicleUI = dummyFalse
     UnitInVehicle = dummyFalse
     UnitUsingVehicle = dummyFalse
@@ -145,7 +151,6 @@ local LibTranslit = LibStub("LibTranslit-1.0")
 local GetIncomingHealsCustom -- upvalue to swap based on HealComm usage
 -- Classic things
 local HealComm
-local LibClassicDurations = LibStub("LibClassicDurations", true)
 local spellNameToID = helpers.spellNameToID
 
 local L = setmetatable({}, {
@@ -185,6 +190,7 @@ local defaults = {
         debuffTooltip_bindCtrl = true,
         useDebuffOrdering = true, -- On always?
         customDebuffHighlights = {},
+        forceShamanColor = true,
         borderWidth = 1,
         enableProfileSwitching = true,
         profileSelection = {
@@ -304,9 +310,25 @@ function Aptechka.PLAYER_LOGIN(self,event,arg1)
     local firstTimeUse = AptechkaDB_Global == nil
     AptechkaDB_Global = AptechkaDB_Global or {}
     AptechkaDB_Char = AptechkaDB_Char or {}
+    if apiLevel <= 3 then
+        if type(AptechkaDB_Char.forcedClassicRole) == "string" then
+            local oldRole = AptechkaDB_Char.forcedClassicRole
+            AptechkaDB_Char.forcedClassicRole = { [1] = oldRole }
+        end
+    end
     self:DoMigrations(AptechkaDB_Global)
     self.db = LibStub("AceDB-3.0"):New("AptechkaDB_Global", defaults, "Default") -- Create a DB using defaults and using a shared default profile
     AptechkaDB = self.db
+
+    if apiLevel == 1 and self.db.global.forceShamanColor and not CUSTOM_CLASS_COLORS then
+        customColors = {
+            SHAMAN = {
+                b=0.86666476726532,
+                g=0.4392147064209,
+                r=0,
+            }
+        }
+    end
 
     -- CUSTOM_CLASS_COLORS is from phanx's ClassColors addons
     colors = setmetatable(customColors or {},{ __index = function(t,k) return (CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS)[k] end })
@@ -330,7 +352,6 @@ function Aptechka.PLAYER_LOGIN(self,event,arg1)
     self.db.RegisterCallback(self, "OnProfileChanged", "Reconfigure")
     self.db.RegisterCallback(self, "OnProfileCopied", "Reconfigure")
     self.db.RegisterCallback(self, "OnProfileReset", "Reconfigure")
-
 
     local customBlacklist = AptechkaDB.global.customBlacklist
     blacklist = setmetatable({}, {
@@ -356,7 +377,7 @@ function Aptechka.PLAYER_LOGIN(self,event,arg1)
     end
 
     if config.enableIncomingHeals then
-        if apiLevel == 3 and Aptechka.db.global.useHealComm then
+        if false then
 
             function Aptechka:HealUpdated(event, casterGUID, spellID, healType, endTime, ...)
                 for i=1,select('#', ...) do
@@ -403,11 +424,6 @@ function Aptechka.PLAYER_LOGIN(self,event,arg1)
         end
     end
 
-    if LibClassicDurations then
-        LibClassicDurations:RegisterFrame(self)
-        UnitAura = LibClassicDurations.UnitAuraWrapper
-        Aptechka:UpdateSpellNameToIDTable()
-    end
     if apiLevel <= 3 then
         function Aptechka:SetClassicClickcastAttributes(f)
             if f:CanChangeAttribute() then
@@ -744,10 +760,6 @@ function Aptechka:GenerateMergedConfig()
     config.GLOBAL = nil
     config[class] = nil
 
-    if apiLevel == 1 then
-        Aptechka.spellNameToID = helpers.spellNameToID
-        Aptechka:UpdateSpellNameToIDTable()
-    end
 
     -- Template application
     helpers.UnwrapConfigTemplates(AptechkaConfigMerged.traces)
@@ -874,7 +886,7 @@ function Aptechka.GetWidgetList()
     local list = Aptechka.GetWidgetListRaw()
     list["statusIcon"] = nil
     list["raidTargetIcon"] = nil
-    list["roleIcon"] = nil
+    -- list["roleIcon"] = nil
     list["debuffIcons"] = nil
     list["mindcontrol"] = nil
     -- list["unhealable"] = nil
@@ -1188,7 +1200,7 @@ function Aptechka.UNIT_HEALTH(self, event, unit)
 end
 
 function Aptechka.FrameUpdateIncomingRes(frame, unit)
-    FrameSetJob(frame, config.IncResStatus, UnitHasIncomingResurrection(unit), "TEXTURE", "Interface\\RaidFrame\\Raid-Icon-Rez")
+    FrameSetJob(frame, config.IncResStatus, UnitHasIncomingResurrection(unit), "RESURRECTION")
 end
 function Aptechka.INCOMING_RESURRECT_CHANGED(self, event, unit)
     Aptechka:ForEachUnitFrame(unit, Aptechka.FrameUpdateIncomingRes)
@@ -1470,6 +1482,7 @@ do
         SHAMAN = true,
         PALADIN = true,
         MONK = true,
+        EVOKER = true,
     }
     local showHybridMana = false
     function Aptechka.FrameUpdateDisplayPower(frame, unit, isDead)
@@ -1772,7 +1785,7 @@ end
 function Aptechka:UpdateRangeChecker()
     local spec = GetSpecialization() or 1
     if config.UnitInRangeFunctions and config.UnitInRangeFunctions[spec] then
-        uir = config.UnitInRangeFunctions[spec]
+        uir = UnitInRange
     else
         uir = UnitInRange
     end
@@ -2748,7 +2761,16 @@ end
 local function OrderedHashMap_Add(t, dataID, job, ...)
     local existingIndex = t[dataID]
     if existingIndex then
-        local isChanged = updateTable(t[existingIndex], ...)
+        local existingData = t[existingIndex]
+        if not existingData then -- apparently this can happen
+            local newData = { ... }
+            newData.job = job
+            t[existingIndex] = newData
+            local isChanged = true
+            return isChanged
+        end
+
+        local isChanged = updateTable(existingData, ...)
         if not isChanged then
             return false
         end
@@ -3003,60 +3025,6 @@ local function SetDebuffIcon(frame, unit, index, debuffType, expirationTime, dur
     end
 end
 
-if apiLevel == 1 then
-    local spellNameBasedCategories = { "traces" }
-    function Aptechka:UpdateSpellNameToIDTable()
-        local mergedConfig = AptechkaConfigMerged
-        local visited = {}
-
-        for _, catName in ipairs(spellNameBasedCategories) do
-            local category = mergedConfig[catName]
-            if category then
-                for spellID, opts in pairs(category) do
-                    if not visited[opts] then
-                        local lastRankID
-                        local clones = opts.clones
-                        if clones and next(clones)then
-                            lastRankID = spellID
-                            for sid in pairs(clones) do
-                                if lastRankID < sid then
-                                    lastRankID = sid
-                                end
-                            end
-                        else
-                            lastRankID = spellID
-                        end
-                        helpers.AddSpellNameRecognition(lastRankID)
-
-                        visited[opts] = true
-                    end
-                end
-            end
-        end
-    end
-
-
-    SetDebuffIcon = function (frame, unit, index, debuffType, expirationTime, duration, icon, count, isBossAura, spellID, spellName)
-        local iconFrame = frame.debuffIcons[index]
-        if debuffType == false then
-            iconFrame:Hide()
-        else
-            iconFrame:SetJob(debuffType, expirationTime, duration, icon, count, isBossAura, spellID)
-            iconFrame:Show()
-
-            local refreshTimestamp = frame.auraEvents[spellName]
-            local now = GetTime()
-            if refreshTimestamp and now - refreshTimestamp < 0.1 then
-                frame.auraEvents[spellName] = nil
-
-                iconFrame.eyeCatcher:Stop()
-                iconFrame.eyeCatcher:Play()
-            end
-        end
-    end
-end
-
-
 local encountered = {}
 
 local function IndicatorAurasProc(frame, unit, index, slot, filter, name, icon, count, debuffType, duration, expirationTime, caster, isStealable, nameplateShowSelf, spellID )
@@ -3157,9 +3125,6 @@ end
 local UnitAuraUniversal -- If available it's using slots API, otherwise just normal UnitAura
 if apiLevel <= 3 then
     UnitAuraUniversal = UnitAura
-    if LibClassicDurations then
-        UnitAuraUniversal = LibClassicDurations.UnitAuraWrapper
-    end
     ForEachAura = function(frame, unit, filter, batchSize, func)
         for i=1,100 do
             local name, icon, count, debuffType, duration, expirationTime, caster, isStealable, nameplateShowSelf, spellID, canApplyAura, isBossAura = UnitAura(unit, i, filter)
@@ -3838,14 +3803,17 @@ Aptechka.Commands = {
         end
     end,
     ["setrole"] = function(v) -- Classic and BCC manual role selection
-        if apiLevel >= 3 then return end
         v = string.upper(v)
-        if v == "HEALER" then
-            AptechkaDB_Char.forcedClassicRole = v
-        else
-            AptechkaDB_Char.forcedClassicRole = "DAMAGER"
+        if not AptechkaDB_Char.forcedClassicRole then
+            AptechkaDB_Char.forcedClassicRole = {}
         end
-        print("Role changed to", AptechkaDB_Char.forcedClassicRole)
+        local tg = GetActiveTalentGroup()
+        if v == "HEALER" then
+            AptechkaDB_Char.forcedClassicRole[tg] = v
+        else
+            AptechkaDB_Char.forcedClassicRole[tg] = "DAMAGER"
+        end
+        print("Talent Group's Role changed to", AptechkaDB_Char.forcedClassicRole[tg])
         Aptechka:OnRoleChanged()
     end,
     ["createpets"] = function()

@@ -247,10 +247,15 @@ function ns.MakeProfileSelection()
         },
     }
 
-    if Aptechka.util.GetAPILevel() <= 2 then
+    if Aptechka.util.GetAPILevel() <= 3 then
+        local GetActiveTalentGroup = GetActiveTalentGroup
+        if Aptechka.util.GetAPILevel() <= 2 then
+            GetActiveTalentGroup = function() return 1 end
+        end
+
         opt.args.manualRoleSelection = {
             type = "group",
-            name = L"Manual Role selection for current character",
+            name = L"Manual Role selection for current talent group",
             width = "double",
             disabled = function() return not Aptechka.db.global.enableProfileSwitching end,
             guiInline = true,
@@ -259,9 +264,14 @@ function ns.MakeProfileSelection()
                 healer = {
                     name = L"Healer",
                     type = "toggle",
-                    get = function(info) return AptechkaDB_Char.forcedClassicRole == "HEALER" end,
+                    get = function(info)
+                        local tg = GetActiveTalentGroup()
+                        return AptechkaDB_Char.forcedClassicRole and AptechkaDB_Char.forcedClassicRole[tg] == "HEALER"
+                    end,
                     set = function(info, v)
-                        AptechkaDB_Char.forcedClassicRole = "HEALER"
+                        local tg = GetActiveTalentGroup()
+                        AptechkaDB_Char.forcedClassicRole = AptechkaDB_Char.forcedClassicRole or {}
+                        AptechkaDB_Char.forcedClassicRole[tg] = "HEALER"
                         Aptechka:OnRoleChanged()
                     end,
                     order = 1,
@@ -269,9 +279,14 @@ function ns.MakeProfileSelection()
                 damager = {
                     name = L"Damager/Tank",
                     type = "toggle",
-                    get = function(info) return AptechkaDB_Char.forcedClassicRole == "DAMAGER" end,
+                    get = function(info)
+                        local tg = GetActiveTalentGroup()
+                        return AptechkaDB_Char.forcedClassicRole and AptechkaDB_Char.forcedClassicRole[tg] == "DAMAGER"
+                    end,
                     set = function(info, v)
-                        AptechkaDB_Char.forcedClassicRole = "DAMAGER"
+                        local tg = GetActiveTalentGroup()
+                        AptechkaDB_Char.forcedClassicRole = AptechkaDB_Char.forcedClassicRole or {}
+                        AptechkaDB_Char.forcedClassicRole[tg] = "DAMAGER"
                         Aptechka:OnRoleChanged()
                     end,
                     order = 2,
